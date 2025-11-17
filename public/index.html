@@ -115,46 +115,109 @@
   <div class="container">
     <h1>RE-AGRI Calculator</h1>
     <form id="calculator-form" onsubmit="event.preventDefault(); calculateResults();">
-      <div class="row">
-        <input type="number" id="farmSize" placeholder="Farm Size (ha)" required>
-        <select id="soilType">
-          <option value="">Select Soil Type</option>
-          <option value="sandy">Sandy</option>
-          <option value="clay">Clay</option>
-          <option value="loamy">Loamy</option>
-          <option value="silt">Silt</option>
-        </select>
-      </div>
-      <div class="row">
-        <input type="number" id="rainfall" placeholder="Rainfall (mm)" required>
-        <select id="climate">
-          <option value="">Select Climate</option>
-          <option value="tropical">Tropical</option>
-          <option value="arid">Arid</option>
-          <option value="temperate">Temperate</option>
-          <option value="cold">Cold</option>
-        </select>
-      </div>
-      <div class="row">
-        <select id="cropCategory" required>
-          <option value="">Select Crop Category</option>
-          <option value="fruits">Fruits</option>
-          <option value="vegetables">Vegetables</option>
-          <option value="cereals">Cereals</option>
-          <option value="livestock">Livestock</option>
-          <option value="other">Other</option>
-        </select>
-        <input type="text" id="cropType" placeholder="Specific Crop Type" required>
-      </div>
-      <div class="row">
-        <input type="number" id="budget" placeholder="Budget (USD)" required>
-        <input type="number" id="timeframe" placeholder="Timeframe (years)" required>
-      </div>
-      <div id="loading" class="hidden">Calculating... Please wait...</div>
-      <div class="row">
-        <button type="submit">Calculate</button>
-      </div>
-    </form>
+  <!-- STEP 1: QUESTIONS ABOUT SOIL CHARACTERISTICS -->
+  <div id="step-1">
+    <div class="row">
+      <select id="soilTexture" required>
+        <option value="">Soil texture when rubbed between fingers</option>
+        <option value="very gritty, coarse particles">Very gritty, coarse particles (like beach sand)</option>
+        <option value="smooth and silky, flour-like">Smooth and silky, flour-like (very fine)</option>
+        <option value="sticky and heavy, hard to crumble">Sticky and heavy, hard to crumble</option>
+        <option value="crumbly, holds together but breaks easily">Crumbly, holds together but breaks easily</option>
+      </select>
+      <select id="soilDrainage" required>
+        <option value="">How does water behave after heavy rain?</option>
+        <option value="water drains very quickly, soil dries fast">Water drains very quickly, soil dries fast</option>
+        <option value="water drains moderately, no standing water">Water drains moderately, no standing water</option>
+        <option value="water stands for a few hours before soaking">Water stands for a few hours before soaking</option>
+        <option value="water often stands for a long time">Water often stands for a long time / creates puddles</option>
+      </select>
+    </div>
+
+    <div class="row">
+      <select id="soilOrganicMatter" required>
+        <option value="">Organic matter / fertility level</option>
+        <option value="very low, soil is pale and low in plant residues">
+          Very low – soil is pale, few plant residues
+        </option>
+        <option value="moderate, some plant residues and darker top layer">
+          Moderate – some residues, slightly darker surface
+        </option>
+        <option value="high, dark topsoil rich in plant material">
+          High – dark topsoil, rich in plant material
+        </option>
+      </select>
+      <select id="soilSlope" required>
+        <option value="">Field slope / terrain</option>
+        <option value="flat or almost flat">Flat or almost flat</option>
+        <option value="gentle slope">Gentle slope</option>
+        <option value="medium to steep slope">Medium to steep slope</option>
+      </select>
+    </div>
+
+    <div class="row">
+      <input
+        type="text"
+        id="soilIssues"
+        placeholder="Current issues (optional, e.g. erosion, compaction, poor yields)"
+      >
+    </div>
+
+    <div class="row">
+      <button type="button" onclick="handleNextStep()">Next</button>
+    </div>
+  </div>
+
+  <!-- STEP 2: EXISTING CALCULATOR (WITH SOIL TYPE PRE-FILLED & DISABLED) -->
+  <div id="step-2" class="hidden">
+    <div class="row">
+      <input type="number" id="farmSize" placeholder="Farm Size (ha)" required>
+      <select id="soilType" disabled>
+        <option value="">Soil Type (pre-selected by AI)</option>
+        <option value="sandy">Sandy</option>
+        <option value="clay">Clay</option>
+        <option value="loamy">Loamy</option>
+        <option value="silt">Silt</option>
+      </select>
+    </div>
+
+    <div class="row">
+      <input type="number" id="rainfall" placeholder="Rainfall (mm)" required>
+      <select id="climate">
+        <option value="">Select Climate</option>
+        <option value="tropical">Tropical</option>
+        <option value="arid">Arid</option>
+        <option value="temperate">Temperate</option>
+        <option value="cold">Cold</option>
+      </select>
+    </div>
+
+    <div class="row">
+      <select id="cropCategory" required>
+        <option value="">Select Crop Category</option>
+        <option value="fruits">Fruits</option>
+        <option value="vegetables">Vegetables</option>
+        <option value="cereals">Cereals</option>
+        <option value="livestock">Livestock</option>
+        <option value="other">Other</option>
+      </select>
+      <input type="text" id="cropType" placeholder="Specific Crop Type" required>
+    </div>
+
+    <div class="row">
+      <input type="number" id="budget" placeholder="Budget (USD)" required>
+      <input type="number" id="timeframe" placeholder="Timeframe (years)" required>
+    </div>
+
+    <div id="loading" class="hidden">Calculating... Please wait...</div>
+
+    <div class="row">
+      <button type="button" onclick="handlePreviousStep()">Back</button>
+      <button type="submit">Calculate</button>
+    </div>
+  </div>
+</form>
+
   </div>
 
   <div id="results-modal" class="modal">
@@ -173,6 +236,85 @@
   </div>
 
   <script>
+
+        async function handleNextStep() {
+      const texture = document.getElementById('soilTexture').value;
+      const drainage = document.getElementById('soilDrainage').value;
+      const organicMatter = document.getElementById('soilOrganicMatter').value;
+      const slope = document.getElementById('soilSlope').value;
+      const issues = document.getElementById('soilIssues').value;
+
+      if (!texture || !drainage || !organicMatter || !slope) {
+        alert("Please answer all required questions about your soil.");
+        return;
+      }
+
+      const loadingEl = document.getElementById('loading');
+      if (loadingEl) {
+        loadingEl.textContent = "Determining soil type... Please wait...";
+        loadingEl.classList.remove('hidden');
+      }
+
+      try {
+        const response = await fetch("/api/determine-soil-type", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            soilTexture: texture,
+            drainage,
+            organicMatter,
+            slope,
+            issues,
+          }),
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          console.error("Soil type API error:", data);
+          alert(data.error || "Failed to determine soil type. Please try again.");
+          return;
+        }
+
+        const soilTypeSelect = document.getElementById('soilType');
+        if (!soilTypeSelect) {
+          alert("Soil type select field not found in the form.");
+          return;
+        }
+
+        // Postavi vraćeni tip tla u select i onemogući izmjenu
+        soilTypeSelect.value = data.soilType;
+        soilTypeSelect.setAttribute("disabled", "disabled");
+
+        // Prelazak sa koraka 1 na korak 2
+        document.getElementById('step-1').classList.add('hidden');
+        document.getElementById('step-2').classList.remove('hidden');
+
+        // Vrati tekst loading-a u početno stanje za kasniju kalkulaciju
+        if (loadingEl) {
+          loadingEl.textContent = "Calculating... Please wait...";
+        }
+      } catch (error) {
+        console.error("Error determining soil type:", error);
+        alert("Failed to determine soil type. Please try again.");
+      } finally {
+        if (loadingEl) {
+          loadingEl.classList.add('hidden');
+        }
+      }
+    }
+
+    function handlePreviousStep() {
+      // Omogućimo useru da promijeni odgovore o tlu i ponovo pokrene AI
+      document.getElementById('step-2').classList.add('hidden');
+      document.getElementById('step-1').classList.remove('hidden');
+
+      const soilTypeSelect = document.getElementById('soilType');
+      if (soilTypeSelect) {
+        soilTypeSelect.removeAttribute("disabled");
+        soilTypeSelect.value = "";
+      }
+    }
     async function calculateResults() {
       document.getElementById('loading').classList.remove('hidden');
       const modalElement = document.getElementById('results-modal');
