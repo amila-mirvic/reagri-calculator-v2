@@ -1,0 +1,15 @@
+{
+  "name": "re-agri-calculator",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "vercel dev"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "@google/generative-ai": "^0.3.0",
+    "cors": "^2.8.5",
+    "body-parser": "^1.20.2"
+  }
+}

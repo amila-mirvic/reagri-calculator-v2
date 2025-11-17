@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RE-AGRI Calculator</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.4.0/jspdf.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Quattrocento+Sans:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    /*  background: url('/public/bg.jpg') no-repeat center center/cover; */
+    background-image: url('https://reviver-project.eu/wp-content/uploads/2025/03/bg-scaled.jpg');
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: cover;
+      font-family: Quattrocento Sans, sans-serif;
+      text-align: center;
+    }
+    .container {
+      width: 1000px;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 15px;
+      backdrop-filter: blur(10px);
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+      justify-content: center;
+    }
+    h1 {
+      color: white;
+      margin-bottom: 20px;
+    }
+    .row {
+      display: flex;
+      gap: 50px;
+      margin-bottom: 20px;
+    }
+    input, select, button {
+      width: 100%;
+      padding: 12px;
+      border: none;
+      border-radius: 5px;
+      font-size: 16px;
+    }
+    input, select {
+      background: rgba(255, 255, 255, 0.6);
+      backdrop-filter: blur(5px);
+    }
+    button {
+      background: #4CAF50;
+      color: white;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      font-size: 18px;
+    }
+    button:hover {
+      background: #45a049;
+      transform: scale(1.05);
+      box-shadow: 0 0 10px rgba(255, 255, 255, 0.6);
+    }
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 10;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.5);
+      justify-content: center;
+      align-items: center;
+    }
+    .modal-content {
+      background: white;
+      padding: 20px;
+      border-radius: 5px;
+      width: 80%;
+      max-width: 600px;
+      text-align: left;
+      overflow-y: auto;
+      max-height: 80vh;
+    }
+    .close {
+      float: right;
+      font-size: 24px;
+      cursor: pointer;
+    }
+    .hidden {
+      display: none;
+    }
+
+    #loading {
+      font-family: Quattrocento Sans, sans-serif;
+      font-size: 24px;
+      color: #fff;
+      margin-bottom: 35px;
+      margin-top: 15px;
+
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>RE-AGRI Calculator</h1>
+    <form id="calculator-form" onsubmit="event.preventDefault(); calculateResults();">
+      <div class="row">
+        <input type="number" id="farmSize" placeholder="Farm Size (ha)" required>
+        <select id="soilType">
+          <option value="">Select Soil Type</option>
+          <option value="sandy">Sandy</option>
+          <option value="clay">Clay</option>
+          <option value="loamy">Loamy</option>
+          <option value="silt">Silt</option>
+        </select>
+      </div>
+      <div class="row">
+        <input type="number" id="rainfall" placeholder="Rainfall (mm)" required>
+        <select id="climate">
+          <option value="">Select Climate</option>
+          <option value="tropical">Tropical</option>
+          <option value="arid">Arid</option>
+          <option value="temperate">Temperate</option>
+          <option value="cold">Cold</option>
+        </select>
+      </div>
+      <div class="row">
+        <select id="cropCategory" required>
+          <option value="">Select Crop Category</option>
+          <option value="fruits">Fruits</option>
+          <option value="vegetables">Vegetables</option>
+          <option value="cereals">Cereals</option>
+          <option value="livestock">Livestock</option>
+          <option value="other">Other</option>
+        </select>
+        <input type="text" id="cropType" placeholder="Specific Crop Type" required>
+      </div>
+      <div class="row">
+        <input type="number" id="budget" placeholder="Budget (USD)" required>
+        <input type="number" id="timeframe" placeholder="Timeframe (years)" required>
+      </div>
+      <div id="loading" class="hidden">Calculating... Please wait...</div>
+      <div class="row">
+        <button type="submit">Calculate</button>
+      </div>
+    </form>
+  </div>
+
+  <div id="results-modal" class="modal">
+    <div class="modal-content">
+      <span class="close" onclick="document.getElementById('results-modal').style.display='none'">&times;</span>
+      <h2>Calculation Results</h2>
+      <h3>Best Practices</h3>
+      <p id="bestPractices"></p>
+      <h3>Estimated ROI</h3>
+      <p><strong>Projected Gains:</strong> <span id="projectedGains"></span></p>
+      <p><strong>Net ROI:</strong> <span id="netROI"></span></p>
+      <h3>Investment Advice</h3>
+      <p id="roiAdvice"></p>
+      <button onclick="downloadPDF()">Download Report</button>
+    </div>
+  </div>
+
+  <script>
+    async function calculateResults() {
+      document.getElementById('loading').classList.remove('hidden');
+      const modalElement = document.getElementById('results-modal');
+    
+      try {
+        const response = await fetch("/api/generate-recommendations", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            cropCategory: document.getElementById('cropCategory').value,
+            cropType: document.getElementById('cropType').value,
+            soilType: document.getElementById('soilType').value,
+            rainfall: document.getElementById('rainfall').value,
+            climate: document.getElementById('climate').value,
+            budget: document.getElementById('budget').value,
+            timeframe: document.getElementById('timeframe').value
+          })
+        });
+    
+        const result = await response.json();
+    
+        document.getElementById('bestPractices').innerHTML = result.bestPractices.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>").replace(/\n/g, "<br><br>");
+        document.getElementById('roiAdvice').innerHTML = result.roiAdvice.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>").replace(/\n/g, "<br><br>");
+    
+        document.getElementById('loading').classList.add('hidden');
+        modalElement.style.display = 'flex';
+    
+      } catch (error) {
+        console.error("Error fetching recommendations:", error);
+        alert("Failed to fetch recommendations.");
+        document.getElementById('loading').classList.add('hidden');
+      }
+    }
+    
+    function downloadPDF() {
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF();
+    
+      doc.setFontSize(18);
+      doc.text("RE-AGRI Calculator Report", 20, 20);
+    
+      const bestPractices = document.getElementById('bestPractices').textContent;
+      const roiAdvice = document.getElementById('roiAdvice').textContent;
+    
+      doc.setFontSize(12);
+    
+      // Function to handle text wrapping and page breaks
+      function addTextWithPageBreaks(doc, text, x, y, maxWidth, lineHeight) {
+        const splitText = doc.splitTextToSize(text, maxWidth);
+        let cursorY = y;
+    
+        splitText.forEach((line, index) => {
+          if (cursorY > 270) { // Check if we need a new page
+            doc.addPage();
+            cursorY = 20; // Reset cursor position for new page
+          }
+          doc.text(line, x, cursorY);
+          cursorY += lineHeight;
+        });
+        return cursorY;
+      }
+    
+      let cursorY = 40; // Initial position
+      doc.text("Best Practices:", 20, cursorY);
+      cursorY = addTextWithPageBreaks(doc, bestPractices, 20, cursorY + 10, 170, 7);
+    
+      doc.addPage(); // Add a new page for the next section
+    
+      cursorY = 20;
+      doc.text("Investment Advice:", 20, cursorY);
+      cursorY = addTextWithPageBreaks(doc, roiAdvice, 20, cursorY + 10, 170, 7);
+    
+      doc.save("RE-AGRI-Report.pdf");
+    }
+    
+    
+    
+  </script>
+</body>
+</html>
