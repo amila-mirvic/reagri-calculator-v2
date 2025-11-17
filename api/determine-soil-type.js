@@ -40,10 +40,18 @@ Use ONLY the information below:
 
 Choose the SINGLE most appropriate soil type from: sandy, clay, loamy, silt.
 
-Return ONLY valid JSON in this exact format:
-{"soilType": "<one of sandy, clay, loamy, silt>"}
+Return ONLY a SINGLE LINE of valid JSON.
+Format MUST be exactly:
+{"soilType":"sandy"} or {"soilType":"clay"} or {"soilType":"loamy"} or {"soilType":"silt"}
 
-Do NOT add any explanation, markdown, backticks or additional text.
+No explanations.
+No markdown.
+No labels.
+No text before or after.
+No line breaks.
+No code fences.
+Only pure JSON.
+
     `.trim();
 
     const result = await model.generateContent(prompt);
@@ -64,13 +72,22 @@ Do NOT add any explanation, markdown, backticks or additional text.
       // Ignorišemo, pokušat ćemo heuristički
     }
 
-    if (!soilType) {
-      const lower = text.toLowerCase();
-      if (lower.includes("loam")) soilType = "loamy";
-      else if (lower.includes("sandy")) soilType = "sandy";
-      else if (lower.includes("clay")) soilType = "clay";
-      else if (lower.includes("silt")) soilType = "silt";
-    }
+// Final fallback – if AI is confused or vague
+if (!soilType) {
+  if (text.toLowerCase().includes("sticky") ||
+      text.toLowerCase().includes("heavy") ||
+      text.toLowerCase().includes("poor drainage")) {
+    soilType = "clay";
+  } else if (text.toLowerCase().includes("gritty") ||
+             text.toLowerCase().includes("coarse")) {
+    soilType = "sandy";
+  } else if (text.toLowerCase().includes("silky")) {
+    soilType = "silt";
+  } else {
+    soilType = "loamy"; // safest default if uncertain
+  }
+}
+
 
     if (!soilType || !["sandy", "clay", "loamy", "silt"].includes(soilType)) {
       return res.status(500).json({
